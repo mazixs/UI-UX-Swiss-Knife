@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>UI/UX Swiss Knife Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f3f5f2;
+        color: #18201d;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      .hero {
+        min-height: 92vh;
+        display: grid;
+        align-items: center;
+        padding: 48px;
+        background:
+          linear-gradient(135deg, rgba(255, 211, 106, 0.8), rgba(159, 217, 199, 0.9)),
+          linear-gradient(90deg, #eef3ff, #f8f2e4);
+      }
+
+      .hero-inner {
+        max-width: 980px;
+      }
+
+      .hero-h1 {
+        max-width: 760px;
+        margin: 0 0 24px;
+        font-size: clamp(48px, 9vw, 116px);
+        line-height: 0.92;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .hero-copy {
+        max-width: 560px;
+        font-size: 20px;
+        line-height: 1.5;
+      }
+
+      .cta-button {
+        display: inline-grid;
+        place-items: center;
+        min-height: 48px;
+        margin-top: 24px;
+        padding: 0 22px;
+        border-radius: 8px;
+        background: #18201d;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        padding: 32px 48px 80px;
+        background: #ffffff;
+      }
+
+      .feature-card {
+        min-height: 180px;
+        padding: 22px;
+        border: 1px solid #d8dfd6;
+        border-radius: 8px;
+        background: #f8faf7;
+      }
+
+      .feature-card:nth-child(2) {
+        background: #e7f6f1;
+      }
+
+      .feature-card:nth-child(3) {
+        background: #fff5d6;
+      }
+
+      .font-sample {
+        padding: 28px 48px 96px;
+        background: #18201d;
+        color: #f7f5ed;
+      }
+
+      .font-sample h2 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 42px;
+        line-height: 1.05;
+        font-weight: 700;
+        font-style: italic;
+        letter-spacing: 0.2px;
+      }
+    </style>
+  </head>
+  <body>
+    <section id="hero" class="hero" data-block="hero-section">
+      <div class="hero-inner" data-component="HeroIntro">
+        <h1 class="hero-h1" data-testid="hero-title">Hero H1 block</h1>
+        <p class="hero-copy">Проверьте измерение A-B, цветовую пипетку и извлечение DOM-имен вроде hero-h1.</p>
+        <a class="cta-button" href="#features" data-qa="cta-button">Проверить блоки</a>
+      </div>
+    </section>
+
+    <main id="features" class="features" data-name="feature-grid">
+      <article class="feature-card" data-testid="measure-card">
+        <h2>Measure</h2>
+        <p>Проведите линию по ширине карточки.</p>
+      </article>
+      <article class="feature-card" data-testid="color-card">
+        <h2>Color</h2>
+        <p>Снимите цвет с этого блока.</p>
+      </article>
+      <article class="feature-card" data-testid="inspect-card">
+        <h2>Inspect</h2>
+        <p>Кликните карточку в режиме “Имена”.</p>
+      </article>
+    </main>
+
+    <section class="font-sample" data-testid="font-sample">
+      <h2>Font detector sample</h2>
+    </section>
+  </body>
+</html>
