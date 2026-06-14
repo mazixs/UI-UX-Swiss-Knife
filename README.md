@@ -42,14 +42,15 @@ npm run pack:extension
 
 GitHub Actions проверяет каждый push в `main` и каждый pull request: запускает синтаксическую проверку, тесты, собирает zip расширения и сохраняет его как artifact.
 
-Релиз создается пушем git-тега:
+Перед релизом обновите `version` в `manifest.json` и `package.json`, затем проверьте соответствие будущего тега версии:
 
 ```bash
-git tag v0.3.0
-git push origin v0.3.0
+npm run release:check -- v1.0
+git tag v1.0
+git push origin v1.0
 ```
 
-Release workflow повторно запускает проверки, собирает zip, создает GitHub Release и прикладывает архив из `dist/`. Changelog генерируется из сообщений коммитов между предыдущим тегом и новым тегом.
+После пуша тега release workflow повторно запускает проверки, собирает zip, создает GitHub Release и прикладывает архив из `dist/`. Changelog генерируется из сообщений коммитов между предыдущим тегом и новым тегом.
 
 ## Проверка
 

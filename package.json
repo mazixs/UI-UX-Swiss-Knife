@@ -1,11 +1,12 @@
 {
   "name": "ui-ux-swiss-knife",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Chrome extension for measuring UI pixels, picking colors, inspecting DOM names, and detecting typography.",
   "scripts": {
-    "check": "node --check background.js && node --check content.js && node --check src/core/color.js && node --check src/core/element-labels.js && node --check src/core/font.js && node --check src/core/geometry.js",
+    "check": "node --check background.js && node --check content.js && node --check scripts/pack-extension.mjs && node --check scripts/validate-release-version.mjs && node --check src/core/color.js && node --check src/core/element-labels.js && node --check src/core/font.js && node --check src/core/geometry.js",
     "pack:extension": "node scripts/pack-extension.mjs",
+    "release:check": "node scripts/validate-release-version.mjs",
     "test": "node --test tests/*.test.js"
   }
 }
