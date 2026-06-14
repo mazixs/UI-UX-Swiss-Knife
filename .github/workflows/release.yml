@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        if: ${{ hashFiles('package-lock.json') != '' }}
+        run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run pack:extension
+      - name: Build changelog from git commits
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${GITHUB_REF_NAME}"
+          previous_tag="$(git describe --tags --abbrev=0 "${GITHUB_SHA}^" 2>/dev/null || true)"
+
+          {
+            echo "## Changes"
+            echo
+            echo "Generated from git commit messages."
+            echo
+
+            if [ -n "$previous_tag" ]; then
+              echo "Range: \`$previous_tag\`...\`$tag\`"
+              echo
+              git log --pretty=format:'- %s (%h)' "${previous_tag}..${GITHUB_SHA}"
+            else
+              echo "Initial release."
+              echo
+              git log --pretty=format:'- %s (%h)' "${GITHUB_SHA}"
+            fi
+
+            echo
+          } > CHANGELOG.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-ux-swiss-knife-${{ github.ref_name }}
+          path: dist/*.zip
+          if-no-files-found: error
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file CHANGELOG.md \
+            --verify-tag
