@@ -38,7 +38,7 @@
       }
 
       .plane.is-active {
-        pointer-events: auto;
+        pointer-events: none;
       }
 
       .panel {
@@ -513,6 +513,50 @@
     ui.status.textContent = message;
   }
 
+  let cursorStyleEl = null;
+
+  function setPageCursor(cursor) {
+    if (!cursor) {
+      if (cursorStyleEl) {
+        cursorStyleEl.remove();
+        cursorStyleEl = null;
+      }
+      return;
+    }
+
+    if (!cursorStyleEl) {
+      cursorStyleEl = document.createElement("style");
+      cursorStyleEl.id = "site-swiss-knife-cursor-style";
+      document.documentElement.appendChild(cursorStyleEl);
+    }
+    cursorStyleEl.textContent = `* { cursor: ${cursor} !important; }`;
+  }
+
+  async function openNativeEyeDropper() {
+    setStatus("Открываю системную пипетку...");
+    ui.colorState.textContent = "ожидание";
+    try {
+      const eyeDropper = new window.EyeDropper();
+      const result = await eyeDropper.open();
+      const hex = result.sRGBHex;
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      const sample = {
+        r, g, b, a: 255,
+        hex,
+        rgb: `rgb(${r}, ${g}, ${b})`
+      };
+      state.lockedColor = sample;
+      updateColorReadout(sample, true);
+      setStatus(`Цвет зафиксирован: ${hex}.`);
+      ui.colorState.textContent = "зафикс.";
+    } catch (err) {
+      setStatus("Системная пипетка отменена.");
+      ui.colorState.textContent = "live";
+    }
+  }
+
   function setTool(tool) {
     state.tool = tool;
     state.draft = null;
@@ -520,7 +564,13 @@
     state.hoverElement = null;
     state.hoverFont = null;
     canvas.classList.toggle("is-active", state.visible);
-    canvas.style.cursor = tool === "measure" ? "crosshair" : tool === "color" ? "none" : "cell";
+    
+    if (state.visible) {
+      const cursor = tool === "measure" ? "crosshair" : tool === "color" ? "none" : "cell";
+      setPageCursor(cursor);
+    } else {
+      setPageCursor(null);
+    }
     loupe.style.display = "none";
 
     ui.toolButtons.forEach((button) => {
@@ -528,8 +578,12 @@
     });
 
     if (tool === "color") {
-      refreshCapture();
-      setStatus("Пипетка работает по снимку видимой области: наведите лупу и кликните ЛКМ.");
+      if (window.EyeDropper) {
+        openNativeEyeDropper();
+      } else {
+        refreshCapture();
+        setStatus("Пипетка работает по снимку видимой области: наведите лупу и кликните ЛКМ.");
+      }
     } else if (tool === "inspect") {
       setStatus("Инспектор активен: наведите на блок и кликните, чтобы зафиксировать имена.");
     } else if (tool === "font") {
@@ -545,7 +599,17 @@
     state.visible = typeof force === "boolean" ? force : !state.visible;
     host.style.display = state.visible ? "block" : "none";
     canvas.classList.toggle("is-active", state.visible);
-    if (!state.visible) loupe.style.display = "none";
+    if (!state.visible) {
+      loupe.style.display = "none";
+      setPageCursor(null);
+    } else {
+      const cursor = state.tool === "measure" ? "crosshair" : state.tool === "color" ? "none" : "cell";
+      setPageCursor(cursor);
+
+      if (state.tool === "color" && window.EyeDropper) {
+        openNativeEyeDropper();
+      }
+    }
   }
 
   function clearAll() {
@@ -776,6 +840,12 @@
   function updateHoverElement(point) {
     const element = pickPageElement(point);
     if (!element) return;
+
+    if (state.hoverElement && state.hoverElement.element === element) {
+      state.hoverElement.rect = element.getBoundingClientRect();
+      return;
+    }
+
     const rect = element.getBoundingClientRect();
     const hints = getFrameworkHints(element);
     const labels = elementLabels.extractElementLabels(element, hints);
@@ -801,6 +871,12 @@
   function updateHoverFont(point) {
     const element = pickPageElement(point);
     if (!element) return;
+
+    if (state.hoverFont && state.hoverFont.element === element) {
+      state.hoverFont.rect = element.getBoundingClientRect();
+      return;
+    }
+
     const rect = element.getBoundingClientRect();
     const computed = getComputedStyle(element);
     const loadedCandidates = fontTools
@@ -1019,30 +1095,38 @@
     ctx.restore();
   }
 
-  function drawElementRect(rect) {
+  function drawHighlightRect(rect, labelText, borderStroke, fillStyle, draft) {
     ctx.save();
-    ctx.strokeStyle = "rgba(255, 211, 106, 0.96)";
-    ctx.fillStyle = "rgba(255, 211, 106, 0.12)";
+    ctx.strokeStyle = borderStroke;
+    ctx.fillStyle = fillStyle;
     ctx.lineWidth = 2;
     ctx.fillRect(rect.left, rect.top, rect.width, rect.height);
     ctx.strokeRect(rect.left, rect.top, rect.width, rect.height);
-    drawFloatingLabel(rect.left + rect.width / 2, rect.top, `${Math.round(rect.width)} × ${Math.round(rect.height)} px`, true);
+    drawFloatingLabel(rect.left + rect.width / 2, rect.top, labelText, draft);
     ctx.restore();
+  }
+
+  function drawElementRect(rect) {
+    drawHighlightRect(
+      rect,
+      `${Math.round(rect.width)} × ${Math.round(rect.height)} px`,
+      "rgba(255, 211, 106, 0.96)",
+      "rgba(255, 211, 106, 0.12)",
+      true
+    );
   }
 
   function drawFontRect(rect, info) {
     const family = info.find((item) => item.label === "Family")?.value || "font";
     const size = info.find((item) => item.label === "Size")?.value || "";
     const shortFamily = family.split(",")[0].replace(/^["']|["']$/g, "");
-
-    ctx.save();
-    ctx.strokeStyle = "rgba(159, 217, 199, 0.96)";
-    ctx.fillStyle = "rgba(159, 217, 199, 0.12)";
-    ctx.lineWidth = 2;
-    ctx.fillRect(rect.left, rect.top, rect.width, rect.height);
-    ctx.strokeRect(rect.left, rect.top, rect.width, rect.height);
-    drawFloatingLabel(rect.left + rect.width / 2, rect.top, `${shortFamily} ${size}`.trim(), false);
-    ctx.restore();
+    drawHighlightRect(
+      rect,
+      `${shortFamily} ${size}`.trim(),
+      "rgba(159, 217, 199, 0.96)",
+      "rgba(159, 217, 199, 0.12)",
+      false
+    );
   }
 
   function drawCrosshair(point) {
@@ -1171,6 +1255,9 @@
       // Resize still works through global move listeners.
     }
 
+    window.addEventListener("pointermove", handleWindowResizeMove, true);
+    window.addEventListener("pointerup", handleWindowResizeUp, true);
+
     event.preventDefault();
     event.stopPropagation();
   }
@@ -1199,6 +1286,9 @@
     } catch {
       // Pointer capture can already be released when mouse fallback ends the resize.
     }
+
+    window.removeEventListener("pointermove", handleWindowResizeMove, true);
+    window.removeEventListener("pointerup", handleWindowResizeUp, true);
   }
 
   function handleWindowResizeUp(event) {
@@ -1215,22 +1305,112 @@
     }
   }
 
-  canvas.addEventListener("pointerdown", handlePointerDown);
-  canvas.addEventListener("pointermove", handlePointerMove);
-  canvas.addEventListener("pointerup", handlePointerUp);
-  canvas.addEventListener("pointerleave", handlePointerLeave);
+  function handlePagePointerDown(event) {
+    if (!state.visible) return;
+    if (event.composedPath().includes(host)) return;
+    if (event.button !== 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const point = pointerPoint(event);
+
+    if (state.tool === "measure") {
+      state.draft = { start: point, end: point };
+      render();
+    }
+
+    if (state.tool === "color") {
+      lockCurrentColor();
+    }
+
+    if (state.tool === "inspect") {
+      lockCurrentElement();
+    }
+
+    if (state.tool === "font") {
+      lockCurrentFont();
+    }
+  }
+
+  function handlePagePointerMove(event) {
+    if (!state.visible) return;
+    if (event.composedPath().includes(host)) {
+      if (state.tool === "color" && !state.lockedColor) {
+        loupe.style.display = "none";
+      }
+      return;
+    }
+
+    const point = pointerPoint(event);
+    state.hoverPoint = point;
+
+    if (state.tool === "measure" && state.draft) {
+      state.draft.end = geometry.snapPoint(state.draft.start, point, state.snap);
+      updateMeasureReadout(geometry.measurementFromPoints(state.draft.start, point, state.snap));
+      render();
+    }
+
+    if (state.tool === "color") {
+      updateHoverColor(point);
+      render();
+    }
+
+    if (state.tool === "inspect") {
+      updateHoverElement(point);
+      render();
+    }
+
+    if (state.tool === "font") {
+      updateHoverFont(point);
+      render();
+    }
+  }
+
+  function handlePagePointerUp(event) {
+    if (!state.visible) return;
+    if (event.composedPath().includes(host)) return;
+    if (event.button !== 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (state.tool === "measure" && state.draft) {
+      const point = pointerPoint(event);
+      const measurement = geometry.measurementFromPoints(state.draft.start, point, state.snap);
+      if (measurement.distance >= 1) {
+        state.measurements.push({ id: Date.now(), ...measurement });
+        updateMeasureReadout(measurement);
+        setStatus(`Зафиксировано: ${measurement.label}.`);
+      }
+      state.draft = null;
+      render();
+    }
+  }
+
+  function preventPageClick(event) {
+    if (!state.visible) return;
+    if (event.composedPath().includes(host)) return;
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   panel.addEventListener("click", handlePanelClick);
   panel.addEventListener("pointerdown", handlePanelPointerDown);
   panel.addEventListener("pointermove", handlePanelPointerMove);
   panel.addEventListener("pointerup", handlePanelPointerUp);
   resizeHandle.addEventListener("pointerdown", beginPanelResize);
   resizeHandle.addEventListener("mousedown", beginPanelResize);
-  window.addEventListener("pointermove", handleWindowResizeMove, true);
-  window.addEventListener("mousemove", handleWindowResizeMove, true);
-  window.addEventListener("pointerup", handleWindowResizeUp, true);
-  window.addEventListener("mouseup", handleWindowResizeUp, true);
   window.addEventListener("resize", resizeCanvas);
   window.addEventListener("keydown", handleKeydown, true);
+
+  window.addEventListener("pointerdown", handlePagePointerDown, true);
+  window.addEventListener("pointermove", handlePagePagePointerMove || handlePagePointerMove, true); // Fallback if named slightly differently
+  window.addEventListener("pointerup", handlePagePointerUp, true);
+  window.addEventListener("mousedown", preventPageClick, true);
+  window.addEventListener("mouseup", preventPageClick, true);
+  window.addEventListener("click", preventPageClick, true);
 
   resizeCanvas();
   updateMeasureReadout(null);
@@ -1242,10 +1422,18 @@
     destroy() {
       window.removeEventListener("resize", resizeCanvas);
       window.removeEventListener("keydown", handleKeydown, true);
+      window.removeEventListener("pointerdown", handlePagePointerDown, true);
+      window.removeEventListener("pointermove", handlePagePagePointerMove || handlePagePointerMove, true);
+      window.removeEventListener("pointerup", handlePagePointerUp, true);
+      window.removeEventListener("mousedown", preventPageClick, true);
+      window.removeEventListener("mouseup", preventPageClick, true);
+      window.removeEventListener("click", preventPageClick, true);
+      
+      // Clean up resize listeners in case they were active
       window.removeEventListener("pointermove", handleWindowResizeMove, true);
-      window.removeEventListener("mousemove", handleWindowResizeMove, true);
       window.removeEventListener("pointerup", handleWindowResizeUp, true);
-      window.removeEventListener("mouseup", handleWindowResizeUp, true);
+
+      setPageCursor(null);
       host.remove();
       delete window[GLOBAL_KEY];
     }
