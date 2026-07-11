@@ -1406,7 +1406,7 @@
   window.addEventListener("keydown", handleKeydown, true);
 
   window.addEventListener("pointerdown", handlePagePointerDown, true);
-  window.addEventListener("pointermove", handlePagePagePointerMove || handlePagePointerMove, true); // Fallback if named slightly differently
+  window.addEventListener("pointermove", handlePagePointerMove, true);
   window.addEventListener("pointerup", handlePagePointerUp, true);
   window.addEventListener("mousedown", preventPageClick, true);
   window.addEventListener("mouseup", preventPageClick, true);
@@ -1423,7 +1423,7 @@
       window.removeEventListener("resize", resizeCanvas);
       window.removeEventListener("keydown", handleKeydown, true);
       window.removeEventListener("pointerdown", handlePagePointerDown, true);
-      window.removeEventListener("pointermove", handlePagePagePointerMove || handlePagePointerMove, true);
+      window.removeEventListener("pointermove", handlePagePointerMove, true);
       window.removeEventListener("pointerup", handlePagePointerUp, true);
       window.removeEventListener("mousedown", preventPageClick, true);
       window.removeEventListener("mouseup", preventPageClick, true);
