@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-07-11
+
+### Fixed
+- **ReferenceError Fix**: Corrected variable typo `handlePagePagePointerMove` to `handlePagePointerMove` in event listener registration/cleanup inside `content.js`. This prevents script crashes and fixes UI interactions completely.
+
 ## [1.1.0] - 2026-07-11
 
 ### Added
