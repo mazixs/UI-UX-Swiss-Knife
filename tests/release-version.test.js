@@ -6,8 +6,8 @@ const assert = require("node:assert/strict");
 
 const root = path.resolve(__dirname, "..");
 
-test("release tag v1.0 matches the project version", () => {
-  const result = spawnSync(process.execPath, ["scripts/validate-release-version.mjs", "v1.0"], {
+test("release tag v1.1 matches the project version", () => {
+  const result = spawnSync(process.execPath, ["scripts/validate-release-version.mjs", "v1.1"], {
     cwd: root,
     encoding: "utf8"
   });
